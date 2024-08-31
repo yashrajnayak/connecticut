@@ -1,0 +1,205 @@
+:root {
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --background-color: #ecf0f1;
+    --text-color: #34495e;
+    --border-radius: 8px;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+h1 {
+    color: var(--primary-color);
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+main {
+    background-color: white;
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+textarea, input[type="password"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+textarea {
+    height: 150px;
+    resize: vertical;
+}
+
+textarea:focus, input[type="password"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.btn {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: #2980b9;
+}
+
+.progress-container {
+    margin-top: 1.5rem;
+}
+
+.progress-bar {
+    height: 10px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-bar-inner {
+    width: 0;
+    height: 100%;
+    background-color: var(--primary-color);
+    transition: width 0.3s ease-in-out;
+}
+
+.result {
+    margin-top: 1.5rem;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+footer {
+    margin-top: 2rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+}
+
+footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+footer a:hover {
+    text-decoration: underline;
+}
+
+.api-status, .failed-usernames {
+    margin-top: 1rem;
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.failed-usernames ul {
+    list-style-type: none;
+    padding-left: 1rem;
+}
+
+.connections-table {
+    margin-top: 2rem;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.connections-table table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 300px;
+}
+
+.connections-table th,
+.connections-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.connections-table th {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.connections-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.failed-usernames {
+    display: none;
+    margin-top: 2rem;
+    padding: 1rem;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--border-radius);
+    color: #721c24;
+}
+
+.failed-usernames h3 {
+    margin-top: 0;
+}
+
+.failed-usernames ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 1rem;
+    }
+
+    main {
+        padding: 1.5rem;
+    }
+
+    h1 {
+        font-size: 2rem;
+    }
+}

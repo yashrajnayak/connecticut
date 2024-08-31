@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connecticut - Developer Meetup Connections</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Connecticut</h1>
+            <p>Developer Meetup Connections</p>
+        </header>
+        <main>
+            <div class="input-group">
+                <label for="usernames">GitHub Usernames</label>
+                <textarea id="usernames" placeholder="Enter GitHub usernames (one per line)"></textarea>
+            </div>
+            <div class="input-group">
+                <label for="token">GitHub Personal Access Token</label>
+                <input type="password" id="token" placeholder="Enter your token">
+            </div>
+            <button id="analyze" class="btn">Analyze Connections</button>
+            <div class="progress-container">
+                <div id="progress" class="progress-bar">
+                    <div id="progress-inner" class="progress-bar-inner"></div>
+                </div>
+            </div>
+            <div id="result" class="result"></div>
+            <div id="connections-table" class="connections-table"></div>
+            <div id="failed-usernames" class="failed-usernames"></div>
+        </main>
+        <footer>
+            <p>Created by <a href="https://github.com/yashrajnayak" target="_blank">Yashraj Nayak</a>. Contribute on <a href="https://github.com/yashrajnayak/connecticut" target="_blank">GitHub</a>.</p>
+        </footer>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
