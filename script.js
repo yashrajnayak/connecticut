@@ -1,3 +1,4 @@
+// Get DOM elements
 const analyzeButton = document.getElementById('analyze');
 const usernamesTextarea = document.getElementById('usernames');
 const tokenInput = document.getElementById('token');
@@ -5,9 +6,20 @@ const progressBar = document.getElementById('progress-inner');
 const resultDiv = document.getElementById('result');
 const connectionsTableDiv = document.getElementById('connections-table');
 const failedUsernamesDiv = document.getElementById('failed-usernames');
+const copyResultsButton = document.getElementById('copy-results');
+const takeSnapshotButton = document.getElementById('take-snapshot');
+const buttonContainer = document.querySelector('.button-container');
 
+// Add event listeners
 analyzeButton.addEventListener('click', analyzeConnections);
+copyResultsButton.addEventListener('click', copyResults);
+takeSnapshotButton.addEventListener('click', takeSnapshot);
 
+/**
+ * Clean and format the input username
+ * @param {string} username - The input username
+ * @returns {string} - The cleaned username
+ */
 function cleanUsername(username) {
     return username.trim()
         .replace(/^@/, '')
@@ -15,15 +27,20 @@ function cleanUsername(username) {
         .replace(/[^a-zA-Z0-9-]+/g, '-');
 }
 
+/**
+ * Main function to analyze GitHub connections
+ */
 async function analyzeConnections() {
     resetUI();
 
+    // Get and clean usernames from textarea
     const usernames = usernamesTextarea.value
         .split('\n')
         .map(cleanUsername)
         .filter(username => username !== '');
     const token = tokenInput.value.trim();
 
+    // Validate input
     if (usernames.length === 0) {
         alert('Please enter at least one GitHub username.');
         return;
@@ -42,6 +59,7 @@ async function analyzeConnections() {
     const totalChecks = usernames.length;
     let checksCompleted = 0;
 
+    // Fetch data for each username
     for (const username of usernames) {
         try {
             const userInfo = await getUserInfo(username, token);
@@ -59,6 +77,12 @@ async function analyzeConnections() {
     displayResults(connections, failedUsernames);
 }
 
+/**
+ * Fetch user information from GitHub API
+ * @param {string} username - GitHub username
+ * @param {string} token - GitHub Personal Access Token
+ * @returns {Object} - User information
+ */
 async function getUserInfo(username, token) {
     const url = `https://api.github.com/users/${username}`;
     const headers = {
@@ -85,6 +109,12 @@ async function getUserInfo(username, token) {
     };
 }
 
+/**
+ * Fetch users that a given user is following
+ * @param {string} username - GitHub username
+ * @param {string} token - GitHub Personal Access Token
+ * @returns {Array} - Array of user objects the given user is following
+ */
 async function getFollowing(username, token) {
     const url = `https://api.github.com/users/${username}/following?per_page=100`;
     const headers = {
@@ -106,6 +136,11 @@ async function getFollowing(username, token) {
     return Promise.all(data.map(user => getUserInfo(user.login, token)));
 }
 
+/**
+ * Display the analysis results in the UI
+ * @param {Map} connections - Map of user connections
+ * @param {Set} failedUsernames - Set of usernames that failed to fetch
+ */
 function displayResults(connections, failedUsernames) {
     const totalConnections = Array.from(connections.values()).reduce((sum, following) => sum + following.length, 0);
     resultDiv.textContent = `Total connections: ${totalConnections}`;
@@ -140,6 +175,11 @@ function displayResults(connections, failedUsernames) {
     tableHTML += '</table>';
     connectionsTableDiv.innerHTML = tableHTML;
 
+    // Show the button container and the buttons
+    buttonContainer.style.display = 'flex';
+    copyResultsButton.style.display = 'inline-block';
+    takeSnapshotButton.style.display = 'inline-block';
+
     // Display failed usernames
     if (failedUsernames.size > 0) {
         failedUsernamesDiv.style.display = 'block';
@@ -154,9 +194,59 @@ function displayResults(connections, failedUsernames) {
     }
 }
 
+/**
+ * Copy the results table to the clipboard
+ */
+function copyResults() {
+    const table = document.querySelector('#connections-table table');
+    const range = document.createRange();
+    range.selectNode(table);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+    document.execCommand('copy');
+    window.getSelection().removeAllRanges();
+    alert('Results copied to clipboard!');
+}
+
+/**
+ * Take a snapshot of the current results and copy to clipboard
+ */
+function takeSnapshot() {
+    const table = document.querySelector('#connections-table table');
+    const rows = Array.from(table.querySelectorAll('tr'));
+    const headers = rows.shift().querySelectorAll('th');
+    const headerNames = Array.from(headers).map(header => header.textContent);
+
+    const snapshot = rows.map(row => {
+        const cells = row.querySelectorAll('td');
+        const rowData = {};
+        headerNames.forEach((header, index) => {
+            rowData[header] = cells[index].textContent;
+        });
+        return rowData;
+    });
+
+    const timestamp = new Date().toISOString();
+    const snapshotData = {
+        timestamp: timestamp,
+        data: snapshot
+    };
+
+    const snapshotString = JSON.stringify(snapshotData);
+    navigator.clipboard.writeText(snapshotString).then(() => {
+        alert('Snapshot copied to clipboard!');
+    }, () => {
+        alert('Failed to copy snapshot to clipboard. Please try again.');
+    });
+}
+
+/**
+ * Reset the UI to its initial state
+ */
 function resetUI() {
     resultDiv.textContent = '';
     progressBar.style.width = '0%';
     connectionsTableDiv.innerHTML = '';
     failedUsernamesDiv.style.display = 'none';
+    buttonContainer.style.display = 'none';
 }
