@@ -175,6 +175,11 @@ function displayResults(connections, failedUsernames) {
     tableHTML += '</table>';
     connectionsTableDiv.innerHTML = tableHTML;
 
+    // Hide the token input field, label, and analyze button
+    tokenInput.style.display = 'none';
+    document.querySelector('label[for="token"]').style.display = 'none';
+    analyzeButton.style.display = 'none';
+
     // Show the button container and the buttons
     buttonContainer.style.display = 'flex';
     copyResultsButton.style.display = 'inline-block';
@@ -193,6 +198,7 @@ function displayResults(connections, failedUsernames) {
         failedUsernamesDiv.style.display = 'none';
     }
 }
+
 
 /**
  * Copy the results table to the clipboard
