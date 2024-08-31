@@ -25,7 +25,7 @@ You can try Connecticut here: [https://yashrajnayak.github.io/connecticut/](http
 4. Click "Analyze Connections" to start the analysis.
 5. View the results in the table below.
 6. Use "Copy Results" to copy the table to your clipboard.
-7. Use "Take Snapshot" to create a snapshot for use in Connecticut Plus.
+7. Use "Take Snapshot" to create a snapshot for use in [Connecticut Plus](https://yashrajnayak.github.io/connecticut-plus/).
 
 **Note:** Keep your token secure and don't share it publicly.
 
