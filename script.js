@@ -59,21 +59,49 @@ async function analyzeConnections() {
     const totalChecks = usernames.length;
     let checksCompleted = 0;
 
-    // Fetch data for each username
+    // Convert all input usernames to lowercase for case-insensitive comparison
+    const lowercaseUsernames = usernames.map(username => username.toLowerCase());
+
+    // Process each username
     for (const username of usernames) {
         try {
+            console.log(`Processing ${username}`);
+            
+            // Fetch user info
             const userInfo = await getUserInfo(username, token);
+            console.log(`User info for ${username}:`, userInfo);
+            
+            // Fetch list of users this user is following
             const following = await getFollowing(username, token);
-            const followingInList = following.filter(user => usernames.includes(user.login) && user.login !== username);
+            console.log(`${username} is following ${following.length} users`);
+            console.log(`${username} is following:`, following.map(u => u.login));
+            
+            // Filter following to only include users from our input list (case-insensitive)
+            const followingInList = following.filter(user => 
+                lowercaseUsernames.includes(user.login.toLowerCase())
+            );
+            
+            console.log(`${username} is following in our list:`, followingInList.map(u => u.login));
+            
+            // Store the connections for this user
             connections.set(userInfo, followingInList);
         } catch (error) {
-            console.error('Error fetching user information:', error);
+            console.error(`Error processing ${username}:`, error);
             failedUsernames.add(username);
         }
+        
+        // Update progress bar
         checksCompleted++;
         progressBar.style.width = `${(checksCompleted / totalChecks) * 100}%`;
     }
 
+    // Log final connections for debugging
+    console.log('Final connections:');
+    for (const [user, following] of connections) {
+        console.log(`${user.login} is following:`, following.map(f => f.login));
+    }
+
+    // Display the results
     displayResults(connections, failedUsernames);
 }
 
@@ -110,30 +138,48 @@ async function getUserInfo(username, token) {
 }
 
 /**
- * Fetch users that a given user is following
+ * Fetch all users that a given user is following
  * @param {string} username - GitHub username
  * @param {string} token - GitHub Personal Access Token
  * @returns {Array} - Array of user objects the given user is following
  */
 async function getFollowing(username, token) {
-    const url = `https://api.github.com/users/${username}/following?per_page=100`;
-    const headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `token ${token}`
-    };
+    let page = 1;
+    let allFollowing = [];
+    
+    while (true) {
+        const url = `https://api.github.com/users/${username}/following?per_page=100&page=${page}`;
+        const headers = {
+            'Accept': 'application/vnd.github.v3+json',
+            'Authorization': `token ${token}`
+        };
 
-    const response = await fetch(url, { headers });
+        console.log(`Fetching following for ${username}, page ${page}`);
+        const response = await fetch(url, { headers });
 
-    if (response.status === 404) {
-        throw new Error('User not found');
+        if (response.status === 404) {
+            throw new Error('User not found');
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(`Received ${data.length} results for ${username}, page ${page}`);
+        
+        allFollowing = allFollowing.concat(data);
+
+        // Stop if we received fewer than 100 results
+        if (data.length < 100) {
+            break;
+        }
+
+        page++;
     }
 
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return Promise.all(data.map(user => getUserInfo(user.login, token)));
+    console.log(`Total following for ${username}: ${allFollowing.length}`);
+    return Promise.all(allFollowing.map(user => getUserInfo(user.login, token)));
 }
 
 /**
