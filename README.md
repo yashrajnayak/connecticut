@@ -1,6 +1,8 @@
 # Connecticut
 
-Web application that analyzes and visualizes connections between developers using GitHub, particularly useful for developer meetups and networking events. The organizer can run it once before the meetup starts and encourage everyone to network and follow each other on GitHub. Afterward, they can run it again to see how many new connections were made at the meetup.
+Web application that analyzes and visualizes connections between developers using GitHub, particularly useful for developer meetups and networking events. 
+
+The organizer can run it once before the meetup starts and encourage everyone to network and follow each other on GitHub. Afterward, they can run it again to see how many new connections were made at the meetup.
 
 
 ## Live Demo
@@ -41,7 +43,15 @@ No build process or server is required as Connecticut runs entirely in the brows
 
 ## Contributing
 
-Contributions are welcome! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for details on how to contribute to this project.
+We love your input! We want to make contributing to this project as easy and transparent as possible, whether it's:
+
+- Reporting a bug by [opening a new issue](https://github.com/yashrajnayak/connecticut/issues/new).
+- Discussing the current state of the code
+- Submitting a fix for any of the [open issues here](https://github.com/yashrajnayak/connecticut/issues).
+- Proposing new features
+- Becoming a maintainer
+
+Pull requests are the best way to propose changes to the codebase.
 
 ## License
 

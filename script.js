@@ -15,6 +15,32 @@ analyzeButton.addEventListener('click', analyzeConnections);
 copyResultsButton.addEventListener('click', copyResults);
 takeSnapshotButton.addEventListener('click', takeSnapshot);
 
+// Add these constants at the top of the file
+const themeSwitch = document.querySelector('input[type="checkbox"]');
+const body = document.body;
+const themeLabel = document.getElementById('theme-label');
+
+// Add this function to validate the GitHub token
+async function validateToken(token) {
+    const url = 'https://api.github.com/user';
+    const headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `token ${token}`
+    };
+
+    try {
+        const response = await fetch(url, { headers });
+        if (response.ok) {
+            return true;
+        } else {
+            return false;
+        }
+    } catch (error) {
+        console.error('Error validating token:', error);
+        return false;
+    }
+}
+
 /**
  * Clean and format the input username
  * @param {string} username - The input username
@@ -41,13 +67,20 @@ async function analyzeConnections() {
     const token = tokenInput.value.trim();
 
     // Validate input
-    if (usernames.length === 0) {
-        alert('Please enter at least one GitHub username.');
+    if (usernames.length < 2) {
+        alert('Please enter at least two GitHub usernames.');
         return;
     }
 
     if (!token) {
         alert('Please provide a GitHub Personal Access Token.');
+        return;
+    }
+
+    // Validate the token
+    const isValidToken = await validateToken(token);
+    if (!isValidToken) {
+        alert('Invalid GitHub Personal Access Token. Please check and try again.');
         return;
     }
 
@@ -245,6 +278,31 @@ function displayResults(connections, failedUsernames) {
     }
 }
 
+// Add this function to handle theme switching
+function switchTheme(e) {
+    if (e.target.checked) {
+        body.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+        themeLabel.textContent = 'Dark Mode';
+    } else {
+        body.setAttribute('data-theme', 'light');
+        localStorage.setItem('theme', 'light');
+        themeLabel.textContent = 'Light Mode';
+    }    
+}
+
+// Add event listener for theme switch
+themeSwitch.addEventListener('change', switchTheme);
+
+// Check for saved theme preference
+const currentTheme = localStorage.getItem('theme');
+if (currentTheme) {
+    body.setAttribute('data-theme', currentTheme);
+    if (currentTheme === 'dark') {
+        themeSwitch.checked = true;
+        themeLabel.textContent = 'Dark Mode';
+    }
+}
 
 /**
  * Copy the results table to the clipboard
