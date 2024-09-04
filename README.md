@@ -1,6 +1,7 @@
 # Connecticut
 
-Web application that analyzes and visualizes connections between GitHub users, particularly useful for developer meetups and networking events.
+Web application that analyzes and visualizes connections between developers using GitHub, particularly useful for developer meetups and networking events. The organizer can run it once before the meetup starts and encourage everyone to network and follow each other on GitHub. Afterward, they can run it again to see how many new connections were made at the meetup.
+
 
 ## Live Demo
 
