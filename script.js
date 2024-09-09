@@ -10,17 +10,16 @@ const copyResultsButton = document.getElementById('copy-results');
 const takeSnapshotButton = document.getElementById('take-snapshot');
 const buttonContainer = document.querySelector('.button-container');
 
-// Add event listeners
 analyzeButton.addEventListener('click', analyzeConnections);
 copyResultsButton.addEventListener('click', copyResults);
 takeSnapshotButton.addEventListener('click', takeSnapshot);
 
-// Add these constants at the top of the file
+// Constants for theme switching functionality
 const themeSwitch = document.querySelector('input[type="checkbox"]');
 const body = document.body;
 const themeLabel = document.getElementById('theme-label');
 
-// Add this function to validate the GitHub token
+// Function to validate the GitHub token
 async function validateToken(token) {
     const url = 'https://api.github.com/user';
     const headers = {
@@ -278,7 +277,7 @@ function displayResults(connections, failedUsernames) {
     }
 }
 
-// Add this function to handle theme switching
+// Function to handle theme switching
 function switchTheme(e) {
     if (e.target.checked) {
         body.setAttribute('data-theme', 'dark');
@@ -291,10 +290,10 @@ function switchTheme(e) {
     }    
 }
 
-// Add event listener for theme switch
+// Event listener for theme switch
 themeSwitch.addEventListener('change', switchTheme);
 
-// Check for saved theme preference
+// Check for saved theme preference and apply it
 const currentTheme = localStorage.getItem('theme');
 if (currentTheme) {
     body.setAttribute('data-theme', currentTheme);
