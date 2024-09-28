@@ -19,6 +19,8 @@ const themeSwitch = document.querySelector('input[type="checkbox"]');
 const body = document.body;
 const themeLabel = document.getElementById('theme-label');
 
+const GITHUB_GRAPHQL_API_URL = "https://api.github.com/graphql";
+
 // Function to validate the GitHub token
 async function validateToken(token) {
     const url = 'https://api.github.com/user';
@@ -94,34 +96,26 @@ async function analyzeConnections() {
     // Convert all input usernames to lowercase for case-insensitive comparison
     const lowercaseUsernames = usernames.map(username => username.toLowerCase());
 
-    // Process each username
+    const [userInfoData, followingData] = await getUserInfoAndFollowing(usernames, token).catch(error => {
+        console.error('Error fetching data:', error);
+    });
     for (const username of usernames) {
         try {
             console.log(`Processing ${username}`);
-            
-            // Fetch user info
-            const userInfo = await getUserInfo(username, token);
-            console.log(`User info for ${username}:`, userInfo);
-            
-            // Fetch list of users this user is following
-            const following = await getFollowing(username, token);
-            console.log(`${username} is following ${following.length} users`);
-            console.log(`${username} is following:`, following.map(u => u.login));
-            
             // Filter following to only include users from our input list (case-insensitive)
-            const followingInList = following.filter(user => 
+            const followingInList = followingData[username].filter(user =>
                 lowercaseUsernames.includes(user.login.toLowerCase())
             );
-            
+
             console.log(`${username} is following in our list:`, followingInList.map(u => u.login));
-            
+
             // Store the connections for this user
-            connections.set(userInfo, followingInList);
+            connections.set(userInfoData[username], followingInList);
         } catch (error) {
             console.error(`Error processing ${username}:`, error);
             failedUsernames.add(username);
         }
-        
+
         // Update progress bar
         checksCompleted++;
         progressBar.style.width = `${(checksCompleted / totalChecks) * 100}%`;
@@ -143,30 +137,100 @@ async function analyzeConnections() {
  * @param {string} token - GitHub Personal Access Token
  * @returns {Object} - User information
  */
-async function getUserInfo(username, token) {
-    const url = `https://api.github.com/users/${username}`;
+function getUserInfo(userData) {
+    console.log('Fetching user info for:', userData);
+    return {
+        login: userData.login,
+        name: userData.name || userData.login,
+        followers: userData.followers.totalCount,
+        following: userData.following.totalCount
+    };
+}
+
+async function fetchInitialFollowing(usernames, token) {
+    const queries = usernames.map((username, i) => `
+        user${i}: user(login: "${username}") {
+            login
+            name
+            followers {
+                totalCount
+            }
+            following(first: 100) {
+                totalCount
+                nodes {
+                    login
+                    name
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
+            }
+        }
+    `);
+
+    const fullQuery = `query { ${queries.join(' ')} }`;
     const headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `token ${token}`
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
     };
 
-    const response = await fetch(url, { headers });
-
-    if (response.status === 404) {
-        throw new Error('User not found');
-    }
-
-    if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    const response = await fetch(GITHUB_GRAPHQL_API_URL, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ query: fullQuery })
+    });
 
     const data = await response.json();
-    return {
-        login: data.login,
-        name: data.name || data.login,
-        followers: data.followers,
-        following: data.following
+    return data.data;
+}
+
+async function fetchAdditionalFollowing(username, cursor, token) {
+    const query = `
+    query($login: String!, $cursor: String) {
+        user(login: $login) {
+            following(first: 100, after: $cursor) {
+                nodes {
+                    login
+                    name
+                }
+                pageInfo {
+                    endCursor
+                    hasNextPage
+                }
+            }
+        }
+    }`;
+
+    const variables = { login: username, cursor: cursor };
+    const headers = {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
     };
+
+    const response = await fetch(GITHUB_GRAPHQL_API_URL, {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ query, variables })
+    });
+
+    const data = await response.json();
+    return data.data.user.following;
+}
+
+async function getAllFollowing(username, initialFollowing, token) {
+    let allFollowing = initialFollowing.nodes;
+    let cursor = initialFollowing.pageInfo.endCursor;
+    let hasNextPage = initialFollowing.pageInfo.hasNextPage;
+
+    while (hasNextPage) {
+        const { nodes, pageInfo } = await fetchAdditionalFollowing(username, cursor, token);
+        allFollowing = allFollowing.concat(nodes);
+        cursor = pageInfo.endCursor;
+        hasNextPage = pageInfo.hasNextPage;
+    }
+
+    return allFollowing;
 }
 
 /**
@@ -175,43 +239,26 @@ async function getUserInfo(username, token) {
  * @param {string} token - GitHub Personal Access Token
  * @returns {Array} - Array of user objects the given user is following
  */
-async function getFollowing(username, token) {
-    let page = 1;
-    let allFollowing = [];
-    
-    while (true) {
-        const url = `https://api.github.com/users/${username}/following?per_page=100&page=${page}`;
-        const headers = {
-            'Accept': 'application/vnd.github.v3+json',
-            'Authorization': `token ${token}`
-        };
-
-        console.log(`Fetching following for ${username}, page ${page}`);
-        const response = await fetch(url, { headers });
-
-        if (response.status === 404) {
-            throw new Error('User not found');
-        }
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log(`Received ${data.length} results for ${username}, page ${page}`);
-        
-        allFollowing = allFollowing.concat(data);
-
-        // Stop if we received fewer than 100 results
-        if (data.length < 100) {
-            break;
-        }
-
-        page++;
+async function getUserInfoAndFollowing(usernames, token) {
+    const initialData = await fetchInitialFollowing(usernames, token);
+    const userInfo = {};
+    for (const userData of Object.values(initialData)) {
+        console.log(userData);
+        userInfo[userData.login] = getUserInfo(userData);
     }
 
-    console.log(`Total following for ${username}: ${allFollowing.length}`);
-    return Promise.all(allFollowing.map(user => getUserInfo(user.login, token)));
+    const followingData = {};
+
+    for (const [i, username] of usernames.entries()) {
+        const initialFollowing = initialData[`user${i}`].following;
+        if (initialFollowing.pageInfo.hasNextPage) {
+            followingData[username] = await getAllFollowing(username, initialFollowing, token);
+        } else {
+            followingData[username] = initialFollowing.nodes;
+        }
+    }
+
+    return [userInfo, followingData];
 }
 
 /**
@@ -287,7 +334,7 @@ function switchTheme(e) {
         body.setAttribute('data-theme', 'light');
         localStorage.setItem('theme', 'light');
         themeLabel.textContent = 'Light Mode';
-    }    
+    }
 }
 
 // Event listener for theme switch
