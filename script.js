@@ -96,7 +96,7 @@ async function analyzeConnections() {
     // Convert all input usernames to lowercase for case-insensitive comparison
     const lowercaseUsernames = usernames.map(username => username.toLowerCase());
 
-    const [userInfoData, followingData] = await getUserInfoAndFollowing(usernames, token).catch(error => {
+    const [userInfoData, followingData] = await getUserInfoAndFollowing(lowercaseUsernames, token).catch(error => {
         console.error('Error fetching data:', error);
     });
     for (const username of usernames) {
@@ -244,7 +244,7 @@ async function getUserInfoAndFollowing(usernames, token) {
     const userInfo = {};
     for (const userData of Object.values(initialData)) {
         console.log(userData);
-        userInfo[userData.login] = getUserInfo(userData);
+        userInfo[userData.login.toLowerCase()] = getUserInfo(userData);
     }
 
     const followingData = {};
