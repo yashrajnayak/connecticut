@@ -98,30 +98,30 @@ async function analyzeConnections() {
     for (const username of usernames) {
         try {
             console.log(`Processing ${username}`);
-            
+
             // Fetch user info
             const userInfo = await getUserInfo(username, token);
             console.log(`User info for ${username}:`, userInfo);
-            
+
             // Fetch list of users this user is following
             const following = await getFollowing(username, token);
             console.log(`${username} is following ${following.length} users`);
             console.log(`${username} is following:`, following.map(u => u.login));
-            
+
             // Filter following to only include users from our input list (case-insensitive)
-            const followingInList = following.filter(user => 
+            const followingInList = following.filter(user =>
                 lowercaseUsernames.includes(user.login.toLowerCase())
             );
-            
+
             console.log(`${username} is following in our list:`, followingInList.map(u => u.login));
-            
+
             // Store the connections for this user
             connections.set(userInfo, followingInList);
         } catch (error) {
             console.error(`Error processing ${username}:`, error);
             failedUsernames.add(username);
         }
-        
+
         // Update progress bar
         checksCompleted++;
         progressBar.style.width = `${(checksCompleted / totalChecks) * 100}%`;
@@ -178,7 +178,7 @@ async function getUserInfo(username, token) {
 async function getFollowing(username, token) {
     let page = 1;
     let allFollowing = [];
-    
+
     while (true) {
         const url = `https://api.github.com/users/${username}/following?per_page=100&page=${page}`;
         const headers = {
@@ -199,7 +199,7 @@ async function getFollowing(username, token) {
 
         const data = await response.json();
         console.log(`Received ${data.length} results for ${username}, page ${page}`);
-        
+
         allFollowing = allFollowing.concat(data);
 
         // Stop if we received fewer than 100 results
@@ -228,15 +228,15 @@ function displayResults(connections, failedUsernames) {
 
     // Create connections table
     let tableHTML = `
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Following</th>
-                <th>Count</th>
-                <th>Total Followers</th>
-                <th>Total Following</th>
-            </tr>
-    `;
+    <table>
+        <tr>
+            <th>Name <span class="caret">&#9658;</span></th>
+            <th>Following <span class="caret">&#9658;</span></th>
+            <th>Count <span class="caret">&#9658;</span></th>
+            <th>Total Followers <span class="caret">&#9658;</span></th>
+            <th>Total Following <span class="caret">&#9658;</span></th>
+        </tr>
+`;
 
     for (const [user, following] of sortedConnections) {
         tableHTML += `
@@ -275,6 +275,53 @@ function displayResults(connections, failedUsernames) {
     } else {
         failedUsernamesDiv.style.display = 'none';
     }
+
+    const table = connectionsTableDiv.querySelector('table');
+    const headers = table.querySelectorAll('th');
+
+    headers.forEach((header, index) => {
+        const caret = header.querySelector('.caret');
+        caret.addEventListener('click', () => {
+            sortTable(index, caret);
+        });
+    });
+}
+
+function sortTable(columnIndex, caret) {
+    const table = connectionsTableDiv.querySelector('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const headerRow = rows[0];
+    rows.splice(0, 1);
+    let isAscending = caret.classList.contains('vertical');
+
+    // Reset all carets
+    table.querySelectorAll('.caret').forEach(c => {
+        c.classList.remove('vertical', 'flipped');
+    });
+
+    caret.classList.add('vertical');
+    if (isAscending) {
+        caret.classList.add('flipped');
+        caret.classList.remove('vertical');
+    }
+
+    rows.sort((a, b) => {
+        let aValue = a.cells[columnIndex].textContent;
+        let bValue = b.cells[columnIndex].textContent;
+
+        if (columnIndex < 2) { // TODO: create a better way to define the sort function for each column
+            return isAscending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+        } else {
+            aValue = parseInt(aValue);
+            bValue = parseInt(bValue);
+            return isAscending ? aValue - bValue : bValue - aValue;
+        }
+    });
+
+    tbody.innerHTML = '';
+    tbody.appendChild(headerRow);
+    rows.forEach(row => tbody.appendChild(row));
 }
 
 // Function to handle theme switching
@@ -287,7 +334,7 @@ function switchTheme(e) {
         body.setAttribute('data-theme', 'light');
         localStorage.setItem('theme', 'light');
         themeLabel.textContent = 'Light Mode';
-    }    
+    }
 }
 
 // Event listener for theme switch
