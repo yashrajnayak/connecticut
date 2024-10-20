@@ -275,15 +275,15 @@ function displayResults(connections, failedUsernames) {
 
     // Create connections table
     let tableHTML = `
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Following</th>
-                <th>Count</th>
-                <th>Total Followers</th>
-                <th>Total Following</th>
-            </tr>
-    `;
+    <table>
+        <tr>
+            <th>Name <span class="caret">&#9658;</span></th>
+            <th>Following <span class="caret">&#9658;</span></th>
+            <th>Count <span class="caret">&#9658;</span></th>
+            <th>Total Followers <span class="caret">&#9658;</span></th>
+            <th>Total Following <span class="caret">&#9658;</span></th>
+        </tr>
+`;
 
     for (const [user, following] of sortedConnections) {
         tableHTML += `
@@ -322,6 +322,53 @@ function displayResults(connections, failedUsernames) {
     } else {
         failedUsernamesDiv.style.display = 'none';
     }
+
+    const table = connectionsTableDiv.querySelector('table');
+    const headers = table.querySelectorAll('th');
+
+    headers.forEach((header, index) => {
+        const caret = header.querySelector('.caret');
+        caret.addEventListener('click', () => {
+            sortTable(index, caret);
+        });
+    });
+}
+
+function sortTable(columnIndex, caret) {
+    const table = connectionsTableDiv.querySelector('table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const headerRow = rows[0];
+    rows.splice(0, 1);
+    let isAscending = caret.classList.contains('vertical');
+
+    // Reset all carets
+    table.querySelectorAll('.caret').forEach(c => {
+        c.classList.remove('vertical', 'flipped');
+    });
+
+    caret.classList.add('vertical');
+    if (isAscending) {
+        caret.classList.add('flipped');
+        caret.classList.remove('vertical');
+    }
+
+    rows.sort((a, b) => {
+        let aValue = a.cells[columnIndex].textContent;
+        let bValue = b.cells[columnIndex].textContent;
+
+        if (columnIndex < 2) { // TODO: create a better way to define the sort function for each column
+            return isAscending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
+        } else {
+            aValue = parseInt(aValue);
+            bValue = parseInt(bValue);
+            return isAscending ? aValue - bValue : bValue - aValue;
+        }
+    });
+
+    tbody.innerHTML = '';
+    tbody.appendChild(headerRow);
+    rows.forEach(row => tbody.appendChild(row));
 }
 
 // Function to handle theme switching

@@ -172,6 +172,8 @@ footer a:hover {
 .connections-table th {
     background-color: var(--primary-color);
     color: white;
+    position: relative;
+    padding-right: 30px;
 }
 
 .connections-table tr:nth-child(even) {
@@ -346,4 +348,24 @@ input:checked + .slider:before {
 [data-theme="dark"] .failed-usernames {
     background-color: #c62828;
     color: #ffffff;
+}
+
+.caret {
+    display: inline-block;
+    cursor: pointer;
+    transition: transform 0.2s;
+    font-size: 0.8em;
+    color: #444;
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.caret.vertical {
+    transform: translateY(-50%) rotate(90deg);
+}
+
+.caret.flipped {
+    transform: translateY(-50%) rotate(270deg);
 }
