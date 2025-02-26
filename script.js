@@ -1,3 +1,8 @@
+// Constants
+const GITHUB_GRAPHQL_API_URL = "https://api.github.com/graphql";
+const RATE_LIMIT_ERROR = "RATE_LIMITED";
+const MAX_USERS_PER_REQUEST = 25;
+
 // Get DOM elements
 const analyzeButton = document.getElementById('analyze');
 const usernamesTextarea = document.getElementById('usernames');
@@ -10,125 +15,153 @@ const copyResultsButton = document.getElementById('copy-results');
 const takeSnapshotButton = document.getElementById('take-snapshot');
 const buttonContainer = document.querySelector('.button-container');
 
+// Add ARIA labels and roles for accessibility
+usernamesTextarea.setAttribute('aria-label', 'Enter GitHub usernames, one per line');
+tokenInput.setAttribute('aria-label', 'GitHub Personal Access Token');
+analyzeButton.setAttribute('aria-label', 'Analyze GitHub Connections');
+progressBar.setAttribute('role', 'progressbar');
+progressBar.setAttribute('aria-valuemin', '0');
+progressBar.setAttribute('aria-valuemax', '100');
+resultDiv.setAttribute('role', 'status');
+resultDiv.setAttribute('aria-live', 'polite');
+
+// Event Listeners
 analyzeButton.addEventListener('click', analyzeConnections);
 copyResultsButton.addEventListener('click', copyResults);
 takeSnapshotButton.addEventListener('click', takeSnapshot);
 
-// Constants for theme switching functionality
+// Theme switching functionality
 const themeSwitch = document.querySelector('input[type="checkbox"]');
 const body = document.body;
 const themeLabel = document.getElementById('theme-label');
 
-const GITHUB_GRAPHQL_API_URL = "https://api.github.com/graphql";
-
-// Function to validate the GitHub token
+/**
+ * Validate GitHub Personal Access Token
+ * @param {string} token - GitHub Personal Access Token
+ * @returns {Promise<boolean>} - Whether the token is valid
+ */
 async function validateToken(token) {
-    const url = 'https://api.github.com/user';
-    const headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': `token ${token}`
-    };
-
     try {
-        const response = await fetch(url, { headers });
-        if (response.ok) {
-            return true;
-        } else {
-            return false;
+        const response = await fetch('https://api.github.com/user', {
+            headers: {
+                'Accept': 'application/vnd.github.v3+json',
+                'Authorization': `token ${token}`
+            }
+        });
+
+        if (response.status === 401) {
+            throw new Error('Invalid token or insufficient permissions');
         }
+
+        if (!response.ok) {
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return true;
     } catch (error) {
-        console.error('Error validating token:', error);
-        return false;
+        console.error('Token validation error:', error);
+        throw new Error(`Failed to validate token: ${error.message}`);
     }
 }
 
 /**
- * Clean and format the input username
- * @param {string} username - The input username
- * @returns {string} - The cleaned username
+ * Clean and format GitHub username
+ * @param {string} username - Raw username input
+ * @returns {string} - Cleaned username
  */
 function cleanUsername(username) {
     return username.trim()
         .replace(/^@/, '')
         .replace(/^(https?:\/\/)?(www\.)?github\.com\//, '')
-        .replace(/[^a-zA-Z0-9-]+/g, '-');
+        .replace(/[^a-zA-Z0-9-]+/g, '-')
+        .toLowerCase();
 }
 
 /**
  * Main function to analyze GitHub connections
  */
 async function analyzeConnections() {
-    resetUI();
+    try {
+        resetUI();
+        updateProgress(0);
 
-    // Get and clean usernames from textarea
-    const usernames = usernamesTextarea.value
-        .split('\n')
-        .map(cleanUsername)
-        .filter(username => username !== '');
-    const token = tokenInput.value.trim();
+        // Get and validate input
+        const usernames = usernamesTextarea.value
+            .split('\n')
+            .map(cleanUsername)
+            .filter(username => username !== '');
 
-    // Validate input
-    if (usernames.length < 2) {
-        alert('Please enter at least two GitHub usernames.');
-        return;
-    }
+        const token = tokenInput.value.trim();
 
-    if (!token) {
-        alert('Please provide a GitHub Personal Access Token.');
-        return;
-    }
-
-    // Validate the token
-    const isValidToken = await validateToken(token);
-    if (!isValidToken) {
-        alert('Invalid GitHub Personal Access Token. Please check and try again.');
-        return;
-    }
-
-    resultDiv.textContent = 'Analyzing connections...';
-    progressBar.style.width = '0%';
-
-    const connections = new Map();
-    const failedUsernames = new Set();
-    const totalChecks = usernames.length;
-    let checksCompleted = 0;
-
-    // Convert all input usernames to lowercase for case-insensitive comparison
-    const lowercaseUsernames = usernames.map(username => username.toLowerCase());
-
-    const [userInfoData, followingData] = await getUserInfoAndFollowing(lowercaseUsernames, token).catch(error => {
-        console.error('Error fetching data:', error);
-    });
-    for (const username of usernames) {
-        try {
-            console.log(`Processing ${username}`);
-            // Filter following to only include users from our input list (case-insensitive)
-            const followingInList = followingData[username].filter(user =>
-                lowercaseUsernames.includes(user.login.toLowerCase())
-            );
-
-            console.log(`${username} is following in our list:`, followingInList.map(u => u.login));
-
-            // Store the connections for this user
-            connections.set(userInfoData[username], followingInList);
-        } catch (error) {
-            console.error(`Error processing ${username}:`, error);
-            failedUsernames.add(username);
+        if (usernames.length < 2) {
+            throw new Error('Please enter at least two GitHub usernames.');
         }
 
-        // Update progress bar
-        checksCompleted++;
-        progressBar.style.width = `${(checksCompleted / totalChecks) * 100}%`;
-    }
+        if (!token) {
+            throw new Error('Please provide a GitHub Personal Access Token.');
+        }
 
-    // Log final connections for debugging
-    console.log('Final connections:');
-    for (const [user, following] of connections) {
-        console.log(`${user.login} is following:`, following.map(f => f.login));
-    }
+        // Validate token
+        await validateToken(token);
 
-    // Display the results
-    displayResults(connections, failedUsernames);
+        resultDiv.textContent = 'Analyzing connections...';
+        resultDiv.setAttribute('aria-busy', 'true');
+
+        const connections = new Map();
+        const failedUsernames = new Set();
+        const totalChecks = usernames.length;
+        let checksCompleted = 0;
+
+        // Process users in batches to optimize API calls
+        for (let i = 0; i < usernames.length; i += MAX_USERS_PER_REQUEST) {
+            const batch = usernames.slice(i, i + MAX_USERS_PER_REQUEST);
+            const [userInfoData, followingData] = await getUserInfoAndFollowing(batch, token);
+            
+            for (const username of batch) {
+                try {
+                    const followingInList = followingData[username].filter(user =>
+                        usernames.includes(user.login.toLowerCase())
+                    );
+                    connections.set(userInfoData[username], followingInList);
+                    checksCompleted++;
+                    updateProgress((checksCompleted / totalChecks) * 100);
+                } catch (error) {
+                    console.error(`Error processing ${username}:`, error);
+                    failedUsernames.add(username);
+                }
+            }
+        }
+
+        displayResults(connections, failedUsernames);
+    } catch (error) {
+        handleError(error);
+    } finally {
+        resultDiv.setAttribute('aria-busy', 'false');
+    }
+}
+
+/**
+ * Update progress bar and ARIA attributes
+ * @param {number} percentage - Progress percentage (0-100)
+ */
+function updateProgress(percentage) {
+    progressBar.style.width = `${percentage}%`;
+    progressBar.setAttribute('aria-valuenow', percentage);
+}
+
+/**
+ * Handle and display errors
+ * @param {Error} error - Error object
+ */
+function handleError(error) {
+    console.error('Application error:', error);
+    resultDiv.textContent = `Error: ${error.message}`;
+    resultDiv.style.color = '#dc3545';
+    
+    if (error.message.includes('rate limit')) {
+        resultDiv.textContent += ' Please try again later.';
+    }
 }
 
 /**
@@ -267,15 +300,35 @@ async function getUserInfoAndFollowing(usernames, token) {
  * @param {Set} failedUsernames - Set of usernames that failed to fetch
  */
 function displayResults(connections, failedUsernames) {
-    const totalConnections = Array.from(connections.values()).reduce((sum, following) => sum + following.length, 0);
-    resultDiv.textContent = `Total connections: ${totalConnections}`;
+    if (connections.size === 0) {
+        resultDiv.textContent = 'No valid connections found.';
+        return;
+    }
 
-    // Sort connections by name
-    const sortedConnections = new Map([...connections.entries()].sort((a, b) => a[0].name.localeCompare(b[0].name)));
+    resultDiv.textContent = 'Analysis complete!';
+    
+    // Create table
+    const table = document.createElement('table');
+    table.setAttribute('role', 'grid');
+    table.innerHTML = createTableHeader(connections);
+    table.innerHTML += createTableBody(connections);
+    
+    connectionsTableDiv.innerHTML = '';
+    connectionsTableDiv.appendChild(table);
+    
+    // Show copy and snapshot buttons
+    copyResultsButton.style.display = 'inline-block';
+    takeSnapshotButton.style.display = 'inline-block';
+    
+    // Display failed usernames if any
+    if (failedUsernames.size > 0) {
+        displayFailedUsernames(failedUsernames);
+    }
+}
 
-    // Create connections table
-    let tableHTML = `
-    <table>
+function createTableHeader(connections) {
+    let headerHTML = `
+    <thead>
         <tr>
             <th>Name <span class="caret">&#9658;</span></th>
             <th>Following <span class="caret">&#9658;</span></th>
@@ -283,10 +336,19 @@ function displayResults(connections, failedUsernames) {
             <th>Total Followers <span class="caret">&#9658;</span></th>
             <th>Total Following <span class="caret">&#9658;</span></th>
         </tr>
+    </thead>
 `;
 
+    return headerHTML;
+}
+
+function createTableBody(connections) {
+    let bodyHTML = '<tbody>';
+
+    const sortedConnections = new Map([...connections.entries()].sort((a, b) => a[0].name.localeCompare(b[0].name)));
+
     for (const [user, following] of sortedConnections) {
-        tableHTML += `
+        bodyHTML += `
             <tr>
                 <td>${user.name}</td>
                 <td>${following.map(f => f.name).join(', ') || 'None'}</td>
@@ -297,78 +359,18 @@ function displayResults(connections, failedUsernames) {
         `;
     }
 
-    tableHTML += '</table>';
-    connectionsTableDiv.innerHTML = tableHTML;
-
-    // Hide the token input field, label, and analyze button
-    tokenInput.style.display = 'none';
-    document.querySelector('label[for="token"]').style.display = 'none';
-    analyzeButton.style.display = 'none';
-
-    // Show the button container and the buttons
-    buttonContainer.style.display = 'flex';
-    copyResultsButton.style.display = 'inline-block';
-    takeSnapshotButton.style.display = 'inline-block';
-
-    // Display failed usernames
-    if (failedUsernames.size > 0) {
-        failedUsernamesDiv.style.display = 'block';
-        failedUsernamesDiv.innerHTML = `
-            <h3>Failed to fetch information for the following usernames:</h3>
-            <ul>
-                ${Array.from(failedUsernames).map(username => `<li>${username}</li>`).join('')}
-            </ul>
-        `;
-    } else {
-        failedUsernamesDiv.style.display = 'none';
-    }
-
-    const table = connectionsTableDiv.querySelector('table');
-    const headers = table.querySelectorAll('th');
-
-    headers.forEach((header, index) => {
-        const caret = header.querySelector('.caret');
-        caret.addEventListener('click', () => {
-            sortTable(index, caret);
-        });
-    });
+    bodyHTML += '</tbody>';
+    return bodyHTML;
 }
 
-function sortTable(columnIndex, caret) {
-    const table = connectionsTableDiv.querySelector('table');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const headerRow = rows[0];
-    rows.splice(0, 1);
-    let isAscending = caret.classList.contains('vertical');
-
-    // Reset all carets
-    table.querySelectorAll('.caret').forEach(c => {
-        c.classList.remove('vertical', 'flipped');
-    });
-
-    caret.classList.add('vertical');
-    if (isAscending) {
-        caret.classList.add('flipped');
-        caret.classList.remove('vertical');
-    }
-
-    rows.sort((a, b) => {
-        let aValue = a.cells[columnIndex].textContent;
-        let bValue = b.cells[columnIndex].textContent;
-
-        if (columnIndex < 2) { // TODO: create a better way to define the sort function for each column
-            return isAscending ? bValue.localeCompare(aValue) : aValue.localeCompare(bValue);
-        } else {
-            aValue = parseInt(aValue);
-            bValue = parseInt(bValue);
-            return isAscending ? aValue - bValue : bValue - aValue;
-        }
-    });
-
-    tbody.innerHTML = '';
-    tbody.appendChild(headerRow);
-    rows.forEach(row => tbody.appendChild(row));
+function displayFailedUsernames(failedUsernames) {
+    failedUsernamesDiv.style.display = 'block';
+    failedUsernamesDiv.innerHTML = `
+        <h3>Failed to fetch information for the following usernames:</h3>
+        <ul>
+            ${Array.from(failedUsernames).map(username => `<li>${username}</li>`).join('')}
+        </ul>
+    `;
 }
 
 // Function to handle theme switching
