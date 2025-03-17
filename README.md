@@ -10,6 +10,7 @@ A powerful web application for analyzing and visualizing GitHub connections betw
 - 🔗 Highlight direct and mutual connections between users
 - 📋 Copy results to clipboard for easy sharing
 - 📸 Create snapshots for before/after comparisons
+- 📊 Compare snapshots to visualize connection growth over time
 - 🌓 Dark/Light theme support
 - 💻 Runs entirely in the browser - no server required
 
@@ -35,13 +36,24 @@ To create a token:
 
 ### Using the App
 
+#### Analyze Mode
+
 1. Visit the [Connecticut app](https://yashrajnayak.github.io/connecticut/)
-2. Enter GitHub usernames (one per line) in the textarea
-3. Paste your GitHub Personal Access Token
-4. Click "Analyze Connections"
-5. View the results in the interactive table
-6. Use "Copy Results" to share the analysis
-7. Use "Take Snapshot" to save the current state for comparison in [Connecticut Plus](https://yashrajnayak.github.io/connecticut-plus/)
+2. Make sure "Analyze Connections" tab is selected
+3. Enter GitHub usernames (one per line) in the textarea
+4. Paste your GitHub Personal Access Token
+5. Click "Analyze Connections"
+6. View the results in the interactive table
+7. Use "Copy Results" to share the analysis
+8. Use "Take Snapshot" to save the current state for comparison
+
+#### Compare Mode
+
+1. Switch to the "Compare Snapshots" tab
+2. Paste the earlier snapshot data into the "Snapshot 1" textarea
+3. Paste the later snapshot data into the "Snapshot 2" textarea
+4. Click the "Compare Snapshots" button to see the results
+5. View a table of users sorted by number of new connections, showing before and after counts
 
 ### Rate Limiting
 
@@ -99,13 +111,3 @@ We welcome contributions! Here's how you can help:
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Related Projects
-
-- [Connecticut Plus](https://github.com/yashrajnayak/connecticut-plus): Compare Connecticut snapshots to track networking progress over time.
-
-## Acknowledgments
-
-- Thanks to all contributors who have helped improve this project
-- Built with GitHub's GraphQL API
-- Uses modern web technologies (HTML5, CSS3, ES6+)

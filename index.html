@@ -21,26 +21,48 @@
             <p>Developer Meetup Connections</p>
         </header>
         <main>
-            <div class="input-group">
-                <label for="usernames">GitHub Usernames</label>
-                <textarea id="usernames" placeholder="Enter GitHub usernames (one per line)"></textarea>
+            <div class="mode-selector">
+                <button id="analyze-mode" class="mode-btn active">Analyze Connections</button>
+                <button id="compare-mode" class="mode-btn">Compare Snapshots</button>
             </div>
-            <div class="input-group">
-                <label for="token">GitHub Personal Access Token</label>
-                <input type="password" id="token" placeholder="Enter your token">
-            </div>
-            <button id="analyze" class="btn">Analyze Connections</button>
-            <div class="progress-container">
-                <div id="progress" class="progress-bar">
-                    <div id="progress-inner" class="progress-bar-inner"></div>
+
+            <!-- Analyze Section -->
+            <div id="analyze-section" class="mode-section active">
+                <div class="input-group">
+                    <label for="usernames">GitHub Usernames</label>
+                    <textarea id="usernames" placeholder="Enter GitHub usernames (one per line)"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="token">GitHub Personal Access Token</label>
+                    <input type="password" id="token" placeholder="Enter your token">
+                </div>
+                <button id="analyze" class="btn">Analyze Connections</button>
+                <div class="progress-container">
+                    <div id="progress" class="progress-bar">
+                        <div id="progress-inner" class="progress-bar-inner"></div>
+                    </div>
+                </div>
+                <div id="result" class="result"></div>
+                <div id="connections-table" class="connections-table"></div>
+                <div id="failed-usernames" class="failed-usernames"></div>
+                <div class="button-container">
+                    <button id="copy-results" class="btn btn-green" style="display: none;">Copy Results</button>
+                    <button id="take-snapshot" class="btn btn-green" style="display: none;">Take Snapshot</button>
                 </div>
             </div>
-            <div id="result" class="result"></div>
-            <div id="connections-table" class="connections-table"></div>
-            <div id="failed-usernames" class="failed-usernames"></div>
-            <div class="button-container">
-                <button id="copy-results" class="btn btn-green" style="display: none;">Copy Results</button>
-                <button id="take-snapshot" class="btn btn-green" style="display: none;">Take Snapshot</button>
+
+            <!-- Compare Section -->
+            <div id="compare-section" class="mode-section">
+                <div class="input-group">
+                    <label for="snapshot1">Snapshot 1</label>
+                    <textarea id="snapshot1" placeholder="Paste the earlier snapshot here"></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="snapshot2">Snapshot 2</label>
+                    <textarea id="snapshot2" placeholder="Paste the later snapshot here"></textarea>
+                </div>
+                <button id="compare" class="btn">Compare Snapshots</button>
+                <div id="comparison-result" class="result"></div>
             </div>
         </main>
         <footer>
